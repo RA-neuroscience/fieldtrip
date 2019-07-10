@@ -20,6 +20,7 @@ function [cfg] = ft_definetrial(cfg)
 % and optionally
 %   cfg.headerformat
 %   cfg.dataformat
+%   cfg.acquisition
 %
 % A call to FT_DEFINETRIAL results in the trial definition "trl" being
 % added to the output configuration structure. The trials are defined

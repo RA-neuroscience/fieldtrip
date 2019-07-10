@@ -12,6 +12,7 @@ function [sens] = ft_read_sens(filename, varargin)
 %   'senstype'       = string, can be 'eeg', 'meg' or 'nirs', specifies which type of sensors to read from the file (default = 'eeg')
 %   'coordsys'       = string, 'head' or 'dewar' (default = 'head')
 %   'coilaccuracy'   = scalar, can be empty or a number (0, 1 or 2) to specify the accuracy (default = [])
+%   'acquisition'    = int, acquisition to use in multi-acquisition datafiles 
 %
 % The electrode, gradiometer and optode structures are defined in more detail 
 % in FT_DATATYPE_SENS.
@@ -22,6 +23,7 @@ function [sens] = ft_read_sens(filename, varargin)
 %   4d_pdf 4d_m4d 4d_xyz ctf_ds ctf_res4 itab_raw itab_mhd netmeg neuromag_fif
 %   neuromag_mne neuromag_mne_elec neuromag_mne_grad polhemus_fil polhemus_pos
 %   zebris_sfp spmeeg_mat eeglab_set localite_pos artinis_oxy3 artinis_oxyproj matlab
+%   York_Instruments/MEGSCAN_hdf5
 %
 % See also FT_READ_HEADER, FT_DATATYPE_SENS, FT_PREPARE_VOL_SENS, FT_COMPUTE_LEADFIELD,
 
@@ -53,6 +55,7 @@ fileformat     = ft_getopt(varargin, 'fileformat', ft_filetype(filename));
 senstype       = ft_getopt(varargin, 'senstype');         % can be eeg or meg, default is automatic when []
 coordsys       = ft_getopt(varargin, 'coordsys', 'head'); % this is used for ctf and neuromag_mne, it can be head or dewar
 coilaccuracy   = ft_getopt(varargin, 'coilaccuracy');     % empty, or a number between 0 to 2
+acquisition   = ft_getopt(varargin, 'acquisition');     % for mult-acquisition files
 
 realtime = any(strcmp(fileformat, {'fcdc_buffer', 'ctf_shm', 'fcdc_mysql'}));
 
@@ -453,6 +456,66 @@ switch fileformat
     % it would be possible to use coil_def.dat to construct the coil positions
     sens.label = label;
     sens.chanpos = [x y z];
+
+  case 'York_Instruments_hdf5'
+    if isempty(acquisition)
+      acquisition=1;
+    end	    
+    if isempty(senstype)
+      % set the default
+      ft_warning('both electrode and gradiometer information is present, returning the electrode information by default');
+      senstype = 'eeg';
+    end
+    hdr=ft_read_header(filename);
+    %i will be the channel index, sens_i is the sensor index
+    sens_i=0;
+    for i=1:hdr.nChans
+      if string(hdr.chantype{i})==upper(senstype) 
+        sens_i=sens_i+1;
+        sens.chantype{sens_i,1}=hdr.chantype{i};
+       	      try
+                sens.chanpos(sens_i,1:3) =  h5read(filename,['/config/channels/' hdr.label{i} '/position']);
+                sens.chanori(sens_i,1:3) =  h5read(filename,['/config/channels/' hdr.label{i} '/orientation']);
+                sens.chanunit{sens_i,1}  =  hdr.chanunit{i}; 
+                sens.coilori(sens_i,1:3) =  sens.chanori(sens_i,1:3);
+                sens.coilpos(sens_i,1:3) =  sens.chanpos(sens_i,1:3);
+                sens.label{sens_i,1}     =  hdr.label{i}; 
+                %sens.tra(i, sens_i)      =  1;
+              catch
+                error('Error reading channel %i sensor details.',i);
+              end
+      else
+        continue
+      end
+    end
+    if sens_i<1
+      error('No data corresponding to the chosen sensor type (%s) found.',senstype);
+    end
+    %sens.tra  = zeros(i,sens_i); %maps channel index in data, to sensor index
+    sens.tra  = eye(sens_i); 
+    %sens.type = char(h5readatt(filename, '/config/', 'name'));
+    sens.type= 'York 4d'
+    %sens.unit= ???
+    %sens.balance
+    if isempty(coordsys)
+      coordsys='dewar'
+    end
+    if strcmp(coordsys,'head')
+      try
+         tCCStoMegscanScs = h5read(filename,[strcat('/acquisitions/',char(string(acquisition))) '/ccs_to_scs_transform'])';
+         sens.chanpos(:,4)=1;
+	 sens.chanori(:,4)=1;
+	 sens.chanpos=sens.chanpos*transpose(tCCStoMegscanScs);
+	 sens.chanori=sens.chanori*transpose(tCCStoMegscanScs);
+	 sens.chanpos(:,4)=[];
+	 sens.chanori(:,4)=[];
+         sens.coilori(sens_i,1:3) =  sens.chanori(sens_i,1:3);
+         sens.coilpos(sens_i,1:3) =  sens.chanpos(sens_i,1:3);
+      catch
+        error('No dewar to head transform available in hdf5 file');
+      end
+    end 
+
 
   otherwise
     ft_error('unknown fileformat for electrodes or gradiometers');

@@ -245,7 +245,7 @@ end
 % backward compatibility for gradiometer, electrode and optode definitions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if isfield(cfg, 'grad') && ~ischar(cfg.grad)
-  cfg.grad = ft_datatype_sens(struct(cfg.grad));
+cfg.grad = ft_datatype_sens(struct(cfg.grad));
 end
 if isfield(cfg, 'elec') && ~ischar(cfg.elec)
   cfg.elec = ft_datatype_sens(struct(cfg.elec));

@@ -60,6 +60,7 @@ function [type] = ft_filetype(filename, desired, varargin)
 %  - Tucker Davis Technology
 %  - VSM-Medtech/CTF
 %  - Yokogawa & Ricoh
+%  - York_Instruments_hdf5
 %  - nifti, gifti
 %  - Nicolet *.e (currently from Natus, formerly Carefusion, Viasys and Taugagreining. Also known as Oxford/Teca/Medelec Valor Nervus)
 %  - Biopac *.acq
@@ -189,7 +190,18 @@ if filetype_check_extension(filename, 'zip')...
   type         = 'compressed';
   manufacturer = 'undefined';
   content      = 'unknown, extract first';
-  
+
+  % known YI file types
+elseif filetype_check_extension(filename, '.meghdf5')
+  type = 'York_Instruments_hdf5';
+  manufacturer = 'York Instruments';
+  content = 'MEG header and data';
+elseif filetype_check_extension(filename, '.hdf5') %&& regexp(h5readatt(filename,'/','format_version')   ,'rev','match')=='rev'
+type = 'York_Instruments_hdf5';
+manufacturer = 'York Instruments';
+content = 'MEG header and data';
+
+
   % these are some streams for asynchronous BCI
 elseif filetype_check_uri(filename, 'fifo')
   type        = 'fcdc_fifo';

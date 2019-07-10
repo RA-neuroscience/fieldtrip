@@ -43,6 +43,7 @@ function [hdr] = ft_read_header(filename, varargin)
 % returned in the hdr.orig subfield.
 %
 % The following MEG dataformats are supported
+%   York Instruments MEGSCAN (*.hdf5)
 %   CTF - VSM MedTech (*.ds, *.res4, *.meg4)
 %   Neuromag - Elekta (*.fif)
 %   BTi - 4D Neuroimaging (*.m4d, *.pdf, *.xyz)
@@ -2572,7 +2573,23 @@ switch headerformat
   case 'video'
     hdr = read_video(filename);
     checkUniqueLabels = false;
-    
+
+  case 'York_Instruments_hdf5'
+    orig            = read_YI_HDF5_meta(filename);
+    hdr.Fs          = orig.SampleFrequency;
+    hdr.nChans      = orig.NChannels;
+    hdr.nSamples    = orig.NSamples;
+%Need to fix this when I have some epoched data
+    hdr.nSamplesPre = 0;
+try    hdr.nTrials     = orig.NTrials;
+    except hdr.nTrials=[];
+end
+    hdr.label       = orig.ChNames;
+    hdr.chantype    = orig.ChType;
+    hdr.chanunit    = orig.ChUnit;
+    % remember original header details
+    hdr.orig        = orig;
+
   otherwise
     % attempt to run headerformat as a function
     % in case using an external read function was desired, this is where it is executed
@@ -2664,7 +2681,7 @@ if isfield(hdr, 'chanunit'), hdr.chanunit = hdr.chanunit(:); end
 hdr.Fs          = double(hdr.Fs);
 hdr.nSamples    = double(hdr.nSamples);
 hdr.nSamplesPre = double(hdr.nSamplesPre);
-hdr.nTrials     = double(hdr.nTrials);
+%!hdr.nTrials     = double(hdr.nTrials);
 hdr.nChans      = double(hdr.nChans);
 
 if inflated

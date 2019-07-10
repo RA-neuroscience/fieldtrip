@@ -9,6 +9,7 @@ function [trl, event] = ft_trialfun_general(cfg)
 %   cfg.trialdef.eventvalue = number, string or list with numbers or strings
 %   cfg.trialdef.prestim    = latency in seconds (optional)
 %   cfg.trialdef.poststim   = latency in seconds (optional)
+%   cfg.acquisition         = acquisition to inspect in multi-acquisition datafiles
 %
 % If you want to read all data from a continuous file in segments, you can specify
 %    cfg.trialdef.triallength = duration in seconds (can be Inf)
